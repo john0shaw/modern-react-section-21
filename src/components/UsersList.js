@@ -1,41 +1,48 @@
 import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { fetchUsers } from "../store";
+import { addUser } from "../store";
 
+import { useThunk } from "../hooks/use-thunk";
+import Button from './Button';
 import Skeleton from "./Skeleton";
+import UsersListItem from "./UsersListItem";
 
 function UsersList() {
-    const dispatch = useDispatch();
+    const [doFetchUsers, isLoadingUsers, loadingUsersError] = useThunk(fetchUsers);
+    const [doCreateUser, isCreatingUser, creatingUserError] = useThunk(addUser);
 
-    const { isLoading, data, error } = useSelector((state) => {
+    const { data } = useSelector((state) => {
         return state.users;
     });
 
     useEffect(() => {
-        dispatch(fetchUsers());
-    }, [dispatch]);
+        doFetchUsers();
+    }, [doFetchUsers]);
 
-    if (isLoading) {
-        return <Skeleton times={6} className="h-10 w-full" />
+    const handleUserAdd = doCreateUser;
+
+    let content;
+    if (isLoadingUsers) {
+        content = <Skeleton times={6} className="h-10 w-full" />
+    } else if (loadingUsersError) {
+        content = <div>Error fetching data...</div>
+    } else {
+        content = data.map((user) => {
+            return <UsersListItem key={user.id} user={user} />;
+        });
     }
-
-    if (error) {
-        return <div>Error fetching data...</div>
-    }
-
-    const renderedUsers = data.map((user) => {
-        return (
-            <div key={user.id} className="mb-2 border rounded">
-                <div className="flex p-2 justify-between items-center cursor-pointer">
-                    {user.name}
-                </div>
-            </div>
-        )
-    });
 
     return (
         <div>
-            {renderedUsers}
+            <div className="flex flex-row justify-between items-center m-3">
+                <h1 className="m-2 text-xl">Users</h1>
+                <Button loading={isCreatingUser} onClick={handleUserAdd}>+ Add User</Button>
+                {
+                    creatingUserError && 'Error creating user'
+                }
+            </div>
+            {content}
         </div>
     );
 }
